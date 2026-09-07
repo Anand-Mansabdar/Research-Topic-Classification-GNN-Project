@@ -7,3 +7,5 @@ torch
 torch-geometric
 scikit-learn
 networkx
+
+onnxscript
