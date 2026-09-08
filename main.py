@@ -2,14 +2,15 @@ import os
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import onnxruntime as ort
+from torch_geometric.datasets import Planetoid
 
 app = FastAPI()
 
 @app.get("/")
 def home():
-  return "Server running successfully...."
+  return {"message": "Server running successfully...."}
 
 
 """
@@ -37,19 +38,18 @@ model_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvide
   REQUEST FORMAT - describes what JSON data we will get from the user
 """
 class GraphPredictRequest(BaseModel):
-  node_feature: List[List[float]]
-  
+  node_features: List[List[float]]
   edge_indices: Optional[List[List[int]]] = None
-  
+
 
 class CORANodeRequest(BaseModel):
-  node_indices = List[int]
-  
-  
+  node_indices: List[int]
+
+
 # Helper functions
-def softmax(scores:np.ndarray):
+def softmax(scores: np.ndarray):
   # Turns raw model scores into prob between 0 and 1
-  shifted = scores- scores.max(axis=1, keepdims=True)
+  shifted = scores - scores.max(axis=1, keepdims=True)
   exponential_scores = np.exp(shifted)
   return exponential_scores / exponential_scores.sum(axis=-1, keepdims=True)
 
@@ -62,11 +62,11 @@ def run_model(node_features: np.ndarray, edge_index: np.ndarray, node_indices_to
       "edge_indices": edge_index.astype(np.int64)
     }
   )
-  
+
   logits = output[0]
   probabilities = softmax(scores=logits)
   predicted_class = logits.argmax(axis=-1)
-  
+
   results = []
   for i in node_indices_to_return:
     results.append({
@@ -76,13 +76,13 @@ def run_model(node_features: np.ndarray, edge_index: np.ndarray, node_indices_to
       "probabilities": probabilities[i].tolist(),
       "logits": logits[i].tolist(),
     })
-    
+
   return {
     "num_nodes": node_features.shape[0],
-    "num_edges": node_features.shape[1],
+    "num_edges": edge_index.shape[1],
     "predictions": results
   }
-  
+
 
 # ROUTES
 @app.get("/health")
@@ -91,8 +91,9 @@ def health():
     "status": "healthy",
     "providers": model_session.get_providers()
   }
-  
 
+
+@app.get("/model_info")
 def model_info():
   """
     Shows basic details about the models
@@ -109,10 +110,11 @@ def model_info():
       {"name": out.name, "shape": out.shape, "type": out.type} for out in model_session.get_outputs()
     ]
   }
-  
+
+
 @app.post("/predict")
 def predict_custom_graph(request: GraphPredictRequest):
-  if not request.node_features or request.node_features == 0:
+  if not request.node_features:
     raise HTTPException(status_code=400, detail="Node Features cannot be empty")
 
   for feature_vector in request.node_features:
@@ -126,17 +128,21 @@ def predict_custom_graph(request: GraphPredictRequest):
     edge_index = np.array(request.edge_indices, dtype=np.int64)
     if edge_index.ndim != 2 or edge_index.shape[0] != 2:
       raise HTTPException(422, "edge_indices must have shape [2, num_edges]")
+    if edge_index.size and (edge_index.min() < 0 or edge_index.max() >= num_nodes):
+      raise HTTPException(422, f"edge_indices must reference node indices between 0 and {num_nodes - 1}")
   else:
     node_ids = np.arange(num_nodes, dtype=np.int64)
     edge_index = np.vstack([node_ids, node_ids])
 
-  all_node_features = list(range(num_nodes))
-  return run_model(node_features, edge_index, all_node_features)
+  all_node_indices = list(range(num_nodes))
+  return run_model(node_features, edge_index, all_node_indices)
 
 
 @app.post('/predict/cora_node')
 def predict_real_cora_nodes(request: CORANodeRequest):
-  from torch_geometric.datasets import Planetoid
+  if not request.node_indices:
+    raise HTTPException(status_code=400, detail="node_indices cannot be empty")
+
   try:
     cora_dataset = Planetoid(root=DATA_DIR, name="Cora")[0]
   except Exception as error:
