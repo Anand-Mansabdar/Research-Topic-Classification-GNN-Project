@@ -1,0 +1,59 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340..600;1,9..144,340..500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-brick-50: #FEF2F2;
+  --color-brick-100: #FFE1E2;
+  --color-brick-200: #FFC9CA;
+  --color-brick-300: #FEA3A5;
+  --color-brick-400: #FB6E71;
+  --color-brick-500: #F34044;
+  --color-brick-600: #E12125;
+  --color-brick-700: #BD181B;
+  --color-brick-800: #AA1A1D;
+  --color-brick-900: #811B1D;
+  --color-brick-950: #46090A;
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-card: 0.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-brick-200;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-brick-50 text-black font-sans antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  ::selection {
+    @apply bg-brick-600 text-white;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brick-600);
+    outline-offset: 2px;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

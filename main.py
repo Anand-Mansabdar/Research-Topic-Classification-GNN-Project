@@ -2,11 +2,19 @@ import os
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import onnxruntime as ort
 from torch_geometric.datasets import Planetoid
 
 app = FastAPI()
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["*"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
