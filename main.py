@@ -5,7 +5,6 @@ from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import onnxruntime as ort
-from torch_geometric.datasets import Planetoid
 
 app = FastAPI()
 app.add_middleware(
@@ -147,7 +146,9 @@ def predict_custom_graph(request: GraphPredictRequest):
 
 
 @app.post('/predict/cora_node')
+
 def predict_real_cora_nodes(request: CORANodeRequest):
+  from torch_geometric.datasets import Planetoid
   if not request.node_indices:
     raise HTTPException(status_code=400, detail="node_indices cannot be empty")
 
